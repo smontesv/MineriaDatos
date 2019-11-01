@@ -1,1 +1,4 @@
-librery(dataset)
+
+library(datasets)
+data(iris)
+summary(iris)
