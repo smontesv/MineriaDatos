@@ -1,0 +1,165 @@
+# -*- coding: utf-8 -*-
+"""
+UNIVERSIDAD NACIONAL DE EDUCACION A DISTANCIA
+Master: Inteligencia Artificial Avanzada 
+Materia: Minería de Datos 
+Actividad 2: Evaluación de la relevancia de variables de entrada
+@author: Sergio Montes Vázquez
+Diciembre 2019
+
+https://machinelearningmastery.com/feature-selection-machine-learning-python/
+https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection
+"""
+
+#0.- Librerias y funciones
+#0.- Librerias 
+import numpy as np
+import random
+from numpy import set_printoptions
+
+from sklearn.feature_selection import GenericUnivariateSelect, chi2
+
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
+
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
+
+from sklearn.feature_selection import RFECV
+from sklearn.svm import SVR
+
+from sklearn.feature_selection import SelectFpr, chi2
+
+#0.1.- Función de Evaluación
+def fnEvalucion(X,Y,features):
+    vTP = 0
+    vTN = 0
+    vFP = 0
+    vFN = 0
+    Resultado = []
+    for I in range(0,len(features)):
+        Ytest = features[I][0] ^ features[I][1]
+        if Y[I] == [1] and Ytest == 1 : vTP = vTP + 1
+        if Y[I] == [0] and Ytest == 0 : vTN = vTN + 1
+        if Y[I] == [1] and Ytest == 0 : vFN = vFN + 1
+        if Y[I] == [0] and Ytest == 1 : vFP = vFP + 1
+        Resultado = [vTP,vTN,vFP,vFN, (vTP+vTN)/len(features),I]
+        #print('0.1--->',I,features[I],X[I],Y[I],Ytest,Resultado)
+    
+    return(Resultado)
+  
+def fnSelVariables(pValores, pNumSel):
+    varSel = []
+    if pNumSel == 0 :
+        for I in range(0,len(pValores)):
+            if pValores[I]== True: 
+                varSel.append(I+1)
+    else:
+        auxIndice= []
+        auxValor = pValores
+        for I in range(0,len(pValores)):
+            auxIndice.append(I+1)
+        if len(pValores)>1:
+            for I in range(0,len(pValores)-1):
+                for J in range(I+1,len(pValores)):
+                    if auxValor[I]<auxValor[J]:
+                        auxV = auxValor[I]
+                        auxValor[I] = auxValor[J]
+                        auxValor[J] = auxV
+                        auxI = auxIndice[I]
+                        auxIndice[I] = auxIndice[J]
+                        auxIndice[J] = auxI
+        for I in range(0,pNumSel):
+            if I<=len(pValores):
+                varSel.append(I+1)
+
+    return(varSel)
+
+def fnSelFeatures(pSel,pVar):
+    features = []
+    for I in range(0,len(pVar)):
+        auxCol = []
+        for J in range(0,len(pSel)):
+            if pSel[J] == True: auxCol.append(pVar[I][J]) 
+        features.append(auxCol)
+    return(features)
+            
+def fnSelNumFeatures(pSelNum,pVar):
+    features = []
+    for I in range(0,len(pVar)):
+        auxCol = []
+        for J in range(0,len(pSelNum)):
+            auxCol.append(pVar[I][pSelNum[J]]) 
+        features.append(auxCol)
+    return(features)
+    
+print('0-> Inicia Actividad 2')
+#1.- Generación de las variables aleatorias
+print('1--> Generación de las variables aleatoeias')
+X = []
+Y = []
+Nombres = ['X1','X2','X3','X4','X5'] 
+for I in range(0,100):
+    X1 = random.choice([0,1])
+    X2 = random.choice([0,1])
+    X3 = random.choice([0,1])
+    X4 = X2 ^ X3
+    X5 = random.choice([0,1])
+    X.append([X1,X2,X3,X4,X5])
+    Y.append([X1 ^ X2 ^ X3])
+    #print('1.1.--->',I,X1,X2,X3,X4,X5)
+#print(X)
+Y = np.ravel(Y)
+
+#2.- Clasificadores
+print('2-->Clasificadores')
+
+#2.0.- Univariate feature selector with configurable strategy
+transformer = GenericUnivariateSelect(chi2, 'k_best', param=2)
+fit = transformer.fit(X, Y)
+features = transformer.fit_transform(X, Y)
+Resultado = fnEvalucion(X,Y,features)
+Score = fit.scores_
+VarSel = fnSelVariables(fit.scores_,2)
+print('2.0--> Resultado: ',VarSel,Score)
+
+#2.1.-Univariate Selection
+test = SelectKBest(score_func=f_classif, k=2)
+fit = test.fit(X, Y)
+set_printoptions(precision=3)
+Scores = fit.scores_
+features = fit.transform(X)
+Resultado = fnEvalucion(X,Y,features)
+VarSel = fnSelVariables(fit.scores_,2)
+print('2.1--> Resultado: ',VarSel,Scores)
+
+#2.2.- Recursive Feature Elimination
+model = LogisticRegression(solver='lbfgs')
+rfe = RFE(model, 2)
+fit = rfe.fit(X, Y)
+selected = fit.support_
+features = fnSelFeatures(selected,X)
+VarSel = fnSelVariables(selected,0)
+#Resultado = fnEvalucion(X,Y,features)
+print('2.2--> Resultado: ',VarSel,fit.support_)
+
+#2.3.- Recursive feature elimination and cross-validated
+estimator = SVR(kernel="linear")
+selector = RFECV(estimator, step=1, cv=10)
+selector = selector.fit(X, Y)
+selected = selector.support_
+features = fnSelFeatures(selected,X)
+VarSel = fnSelVariables(selected,0)
+#Resultado = fnEvalucion(X,Y,features)
+print('2.3--> Resultado: ',VarSel,selector.support_)
+
+#2.4.- Select the pvalues below alpha based on a FPR test.
+transformer = SelectFpr(chi2, alpha=0.01)
+fit = transformer.fit(X, Y)
+features = transformer.fit_transform(X, Y)
+Scores = fit.scores_
+VarSel = fnSelVariables(fit.scores_,2)
+Resultado = fnSelNumFeatures(VarSel,X)
+print('2.4--> Resultado: ',VarSel,Scores)
+
+print('99-> Fin Actividad 2')
