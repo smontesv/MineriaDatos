@@ -1,15 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-UNIVERSIDAD NACIONAL DE EDUCACION A DISTANCIA
-Master: Inteligencia Artificial Avanzada 
-Materia: Minería de Datos 
-Actividad 2: Evaluación de la relevancia de variables de entrada
-@author: Sergio Montes Vázquez
-Enero 2020
-
-https://machinelearningmastery.com/feature-selection-machine-learning-python/
-https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection
-"""
 
 #0.- Librerias y funciones
 #0.- Librerias 
